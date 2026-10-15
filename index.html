@@ -4,37 +4,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Просмотр урока</title>
-    <!-- Подключаем библиотеку Telegram, чтобы сайт умел читать данные ученика -->
     <script src="https://telegram.org"></script>
+    <script src="https://kinescope.io"></script>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; display: flex; justify-content: center; align-items: center; }
-        iframe { border: none; width: 100%; height: 100vh; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        #player { width: 100vw; height: 100vh; }
     </style>
 </head>
 <body>
-    <div id="player" style="width: 100%; height: 100%;"></div>
+    <div id="player"></div>
 
     <script>
         const tg = window.Telegram.WebApp;
         tg.ready();
-        tg.expand(); // Разворачиваем окно на весь экран телефона
+        tg.expand();
 
-        // 1. Скрипт забирает ID видео из ссылки Telegram (?startapp=ID)
-        const videoId = tg.initDataUnsafe?.start_param;
-        const container = document.getElementById('player');
+        // Достаем ID видео прямо из параметров ссылки
+        const urlParams = new URLSearchParams(window.location.search);
+        const videoId = urlParams.get('id') || tg.initDataUnsafe?.start_param;
 
         if (videoId) {
-            // 2. Скрипт забирает имя и ID ученика из Telegram
             const user = tg.initDataUnsafe?.user;
             const userData = user ? `${user.first_name} (ID: ${user.id})` : "Защищенный просмотр";
 
-            // 3. Формируем ту самую ссылку, о которой говорит Kinescope, подставляя данные
-            const kinescopeUrl = `https://kinescope.io{videoId}?watermark=${encodeURIComponent(userData)}`;
-
-            // 4. Вставляем плеер на страницу
-            container.innerHTML = `<iframe src="${kinescopeUrl}" allow="autoplay; fullscreen; picture-in-picture; encrypted-media;" allowfullscreen></iframe>`;
+            Kinescope.IframePlayer.create('player', {
+                url: `https://kinescope.io{videoId}`,
+                watermark: {
+                    text: userData,
+                    mode: 'item',
+                    scale: 1,
+                    opacity: 0.35
+                }
+            }).catch(function(error) {
+                document.getElementById('player').innerHTML = '<div style="color:#fff; text-align:center; padding-top:45vh; font-family:sans-serif;">Ошибка загрузки видео. Проверьте тариф Kinescope.</div>';
+            });
         } else {
-            container.innerHTML = '<div style="color:#fff; text-align:center; padding-top:40vh; font-family:sans-serif;">Видео не найдено. Перейдите по ссылке из канала.</div>';
+            document.getElementById('player').innerHTML = '<div style="color:#fff; text-align:center; padding-top:45vh; font-family:sans-serif;">Видео не найдено. Откройте ссылку из канала.</div>';
         }
     </script>
 </body>
